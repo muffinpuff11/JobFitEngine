@@ -324,11 +324,25 @@ def analyze():
     #  Clean resume text
     resume_text = clean_text(resume_text)
 
-    # 🔍 Similarity matching with job descriptions
+    # 🟩 Compute similarity between resume and all job descriptions
     sim_scores = cosine_similarity(vectorizer.transform([resume_text]), job_vecs).flatten()
-    top_indices = sim_scores.argsort()[-3:][::-1]
-    matched_jobs = job_df.iloc[top_indices]
+    
+    # 🟩 Rank all jobs by similarity score (descending)
+    ranked_jobs = sorted(zip(sim_scores, job_df['job_title'], job_df['clean_description']), reverse=True)
+    
+    # 🟩 Select top 5 matches for display
+    top_n = 5
+    top_matches = ranked_jobs[:top_n]
+    matched_jobs = pd.DataFrame(top_matches, columns=['score', 'job_title', 'clean_description'])
+    
+    # 🟩 Print to terminal
+    print("\n🔝 Top Job Matches by Cosine Similarity:")
+    for i, (score, title, _) in enumerate(top_matches, 1):
+        print(f"{i}. {title} — Score: {round(score, 3)}")
+    
+    # 🟩 Top job for further analysis
     top_job = matched_jobs.iloc[0]['clean_description']
+    
 
     #  Generate radar chart comparing skills
     chart_path = generate_chart(resume_text, top_job)
@@ -429,7 +443,16 @@ def analyze():
         </head>
         <body>
             <h2>🔍 Top Job Matches</h2>
-            <ul>{% for job in jobs %}<li>{{job}}</li>{% endfor %}</ul>
+            <table style="margin: 0 auto; border-collapse: collapse;">
+                <tr><th style="padding: 8px 16px;">Job Title</th><th style="padding: 8px 16px;">Match Score</th></tr>
+                {% for title, score in job_ranked %}
+                <tr>
+                    <td style="padding: 6px 16px; border: 1px solid #ccc;">{{ title }}</td>
+                    <td style="padding: 6px 16px; border: 1px solid #ccc;">{{ "%.2f"|format(score * 100) }}%</td>
+                </tr>
+                {% endfor %}
+            </table>
+            
 
             <h3>📊 Skill Gap Radar</h3>
             <img src="/static/skill_gap.png" width="400">
@@ -461,7 +484,17 @@ def analyze():
             </div>
         </body>
         </html>
-    ''', jobs=matched_jobs['job_title'].tolist(), recs=recommendations, levels=skill_scores, suggestion=suggestion, level_chart=level_chart_path,ranking_metrics=ranking_metrics)
+    ''', return render_template_string(
+    ...,
+    jobs=matched_jobs['job_title'].tolist(),
+    recs=recommendations,
+    levels=skill_scores,
+    suggestion=suggestion,
+    level_chart=level_chart_path,
+    ranking_metrics=ranking_metrics,
+    job_ranked=[(row['job_title'], row['score']) for _, row in matched_jobs.iterrows()]  # 🟩 add this
+)
+
 
 if __name__ == '__main__':
     print("🚀 Launching Skill Gap Analyzer at http://127.0.0.1:5000")
