@@ -207,6 +207,45 @@ def estimate_relevant_skills(resume_text, job_text, all_skills):
         scores[skill] = min(100, count * 20)  # simple score: more mentions = more confidence
     return scores
 
+# 🟩 Ranking Metrics Calculation
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+def compute_ranking_metrics(resume_text, job_text, skill_list):
+    y_true = [1 if skill in job_text else 0 for skill in skill_list]
+    y_pred = [1 if skill in resume_text else 0 for skill in skill_list]
+
+    precision = precision_score(y_true, y_pred, zero_division=0)
+    recall = recall_score(y_true, y_pred, zero_division=0)
+    f1 = f1_score(y_true, y_pred, zero_division=0)
+
+    # Compute NDCG
+    relevance_scores = [1 if skill in job_text else 0 for skill in skill_list]
+    predicted_scores = [resume_text.count(skill) for skill in skill_list]
+    sorted_indices = np.argsort(predicted_scores)[::-1]
+    dcg = sum([(2**relevance_scores[i] - 1) / np.log2(idx + 2) for idx, i in enumerate(sorted_indices)])
+    idcg = sum([(2**r - 1) / np.log2(idx + 2) for idx, r in enumerate(sorted(relevance_scores, reverse=True))])
+    ndcg = dcg / idcg if idcg > 0 else 0.0
+
+    # Compute MAP
+    relevant_skills = set(skill for skill in skill_list if skill in job_text)
+    retrieved_skills = [skill for skill in skill_list if skill in resume_text]
+    hits = 0
+    sum_precisions = 0
+    for i, skill in enumerate(retrieved_skills):
+        if skill in relevant_skills:
+            hits += 1
+            sum_precisions += hits / (i + 1)
+    map_score = sum_precisions / len(relevant_skills) if relevant_skills else 0.0
+
+    return {
+        "Precision": round(precision, 3),
+        "Recall": round(recall, 3),
+        "F1-Score": round(f1, 3),
+        "NDCG": round(ndcg, 3),
+        "MAP": round(map_score, 3)
+    }
+
+
 #  Step 7: Flask Routes
 @app.route('/')
 def home():
