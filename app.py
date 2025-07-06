@@ -484,8 +484,7 @@ def analyze():
             </div>
         </body>
         </html>
-    ''', return render_template_string(
-    ...,
+    ''', 
     jobs=matched_jobs['job_title'].tolist(),
     recs=recommendations,
     levels=skill_scores,
