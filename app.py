@@ -335,6 +335,7 @@ def analyze():
 
     #  Estimate resume skill strength
     skill_scores = estimate_relevant_skills(resume_text, top_job, skills)
+    ranking_metrics = compute_ranking_metrics(resume_text, top_job, skills)
     level_chart_path = generate_skill_bar_chart(skill_scores)
 
     #🎓 Generate enriched recommendations
@@ -440,6 +441,18 @@ def analyze():
                 <p style="text-align:center;">{{ suggestion }}</p>
             {% endif %}
 
+            <h3>📐 Ranking Evaluation Metrics</h3>
+            <table style="margin: 0 auto; border-collapse: collapse;">
+                <tr><th style="padding: 6px 12px;">Metric</th><th style="padding: 6px 12px;">Score</th></tr>
+                {% for metric, score in ranking_metrics.items() %}
+                    <tr>
+                        <td style="padding: 6px 12px; border: 1px solid #ccc;">{{ metric }}</td>
+                        <td style="padding: 6px 12px; border: 1px solid #ccc;">{{ score }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+
+
             <h3>🎓 Recommendations</h3>
             <ul>{% for rec in recs %}<li>{{rec|safe}}</li>{% endfor %}</ul>
 
@@ -448,7 +461,7 @@ def analyze():
             </div>
         </body>
         </html>
-    ''', jobs=matched_jobs['job_title'].tolist(), recs=recommendations, levels=skill_scores, suggestion=suggestion, level_chart=level_chart_path)
+    ''', jobs=matched_jobs['job_title'].tolist(), recs=recommendations, levels=skill_scores, suggestion=suggestion, level_chart=level_chart_path,ranking_metrics=ranking_metrics)
 
 if __name__ == '__main__':
     print("🚀 Launching Skill Gap Analyzer at http://127.0.0.1:5000")
